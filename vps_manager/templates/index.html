@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .vps-list {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .status-button {
+            margin: 2px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+        }
+        .status-button.started {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-button.blocked {
+            background-color: #f44336;
+            color: white;
+        }
+        .status-button.stopped {
+            background-color: #ff9800;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>VPS Manager</h1>
+
+    <!-- Форма для создания нового VPS -->
+    <h2>Create New VPS</h2>
+    <form id="create-vps-form">
+        <div class="form-group">
+            <label for="uid">UID:</label>
+            <input type="text" id="uid" name="uid" required>
+        </div>
+        <div class="form-group">
+            <label for="cpu">CPU:</label>
+            <input type="number" id="cpu" name="cpu" required>
+        </div>
+        <div class="form-group">
+            <label for="ram">RAM:</label>
+            <input type="number" id="ram" name="ram" required>
+        </div>
+        <div class="form-group">
+            <label for="hdd">HDD:</label>
+            <input type="number" id="hdd" name="hdd" required>
+        </div>
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status">
+                <option value="started">Started</option>
+                <option value="blocked">Blocked</option>
+                <option value="stopped">Stopped</option>
+            </select>
+        </div>
+        <button type="submit" class="button">Create VPS</button>
+    </form>
+
+    <!-- Форма для фильтрации VPS -->
+    <h2>Filter VPS</h2>
+    <form id="filter-vps-form">
+        <div class="form-group">
+            <label for="filter-cpu">CPU:</label>
+            <input type="number" id="filter-cpu" name="cpu">
+        </div>
+        <div class="form-group">
+            <label for="filter-ram">RAM:</label>
+            <input type="number" id="filter-ram" name="ram">
+        </div>
+        <div class="form-group">
+            <label for="filter-hdd">HDD:</label>
+            <input type="number" id="filter-hdd" name="hdd">
+        </div>
+        <div class="form-group">
+            <label for="filter-status">Status:</label>
+            <select id="filter-status" name="status">
+                <option value="">All</option>
+                <option value="started">Started</option>
+                <option value="blocked">Blocked</option>
+                <option value="stopped">Stopped</option>
+            </select>
+        </div>
+        <button type="submit" class="button">Filter VPS</button>
+    </form>
+
+    <!-- Список VPS -->
+    <h2>VPS List</h2>
+    <div class="vps-list">
+        <table id="vps-table">
+            <thead>
+                <tr>
+                    <th>UID</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>HDD</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Строки будут добавлены с помощью JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const apiUrl = 'http://127.0.0.1:8000/vps/';
+
+        // Функция для создания нового VPS
+        document.getElementById('create-vps-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                uid: document.getElementById('uid').value,
+                cpu: parseInt(document.getElementById('cpu').value),
+                ram: parseInt(document.getElementById('ram').value),
+                hdd: parseInt(document.getElementById('hdd').value),
+                status: document.getElementById('status').value,
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            if (response.ok) {
+                alert('VPS created successfully!');
+                loadVPSList();
+            } else {
+                alert('Failed to create VPS');
+            }
+        });
+
+        // Функция для загрузки списка VPS
+        async function loadVPSList() {
+            const response = await fetch(apiUrl);
+            const vpsList = await response.json();
+            const vpsTableBody = document.querySelector('#vps-table tbody');
+            vpsTableBody.innerHTML = '';
+
+            vpsList.forEach(vps => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${vps.uid}</td>
+                    <td>${vps.cpu}</td>
+                    <td>${vps.ram}</td>
+                    <td>${vps.hdd}</td>
+                    <td>${vps.status}</td>
+                    <td>
+                        <button class="status-button started" onclick="changeStatus('${vps.uid}', 'started')">Start</button>
+                        <button class="status-button blocked" onclick="changeStatus('${vps.uid}', 'blocked')">Block</button>
+                        <button class="status-button stopped" onclick="changeStatus('${vps.uid}', 'stopped')">Stop</button>
+                    </td>
+                `;
+                vpsTableBody.appendChild(row);
+            });
+        }
+
+        // Функция для изменения статуса VPS
+        async function changeStatus(uid, status) {
+            const response = await fetch(`${apiUrl}${uid}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status }),
+            });
+
+            if (response.ok) {
+                alert('Status changed successfully!');
+                loadVPSList();
+            } else {
+                alert('Failed to change status');
+            }
+        }
+
+        // Функция для фильтрации VPS
+        document.getElementById('filter-vps-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const params = new URLSearchParams({
+                cpu: document.getElementById('filter-cpu').value,
+                ram: document.getElementById('filter-ram').value,
+                hdd: document.getElementById('filter-hdd').value,
+                status: document.getElementById('filter-status').value,
+            });
+
+            const response = await fetch(`${apiUrl}?${params}`);
+            const vpsList = await response.json();
+            const vpsTableBody = document.querySelector('#vps-table tbody');
+            vpsTableBody.innerHTML = '';
+
+            vpsList.forEach(vps => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${vps.uid}</td>
+                    <td>${vps.cpu}</td>
+                    <td>${vps.ram}</td>
+                    <td>${vps.hdd}</td>
+                    <td>${vps.status}</td>
+                    <td>
+                        <button class="status-button started" onclick="changeStatus('${vps.uid}', 'started')">Start</button>
+                        <button class="status-button blocked" onclick="changeStatus('${vps.uid}', 'blocked')">Block</button>
+                        <button class="status-button stopped" onclick="changeStatus('${vps.uid}', 'stopped')">Stop</button>
+                    </td>
+                `;
+                vpsTableBody.appendChild(row);
+            });
+        });
+
+        // Загружаем список VPS при загрузке страницы
+        loadVPSList();
+    </script>
+</body>
+</html>
